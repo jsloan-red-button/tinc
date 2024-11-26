@@ -545,10 +545,7 @@ bool receive_tcppacket_sptps(connection_t *c, const char *data, size_t len) {
 	/* If we're not the final recipient, relay the packet. */
 
 	if(to != myself) {
-		if(to->status.validkey) {
-			send_sptps_data(to, from, 0, data, len);
-		}
-
+		send_sptps_data(to, from, 0, data, len);
 		try_tx(to, true);
 		return true;
 	}
@@ -1462,12 +1459,12 @@ void send_packet(node_t *n, vpn_packet_t *packet) {
 		return;
 	}
 
-	logger(DEBUG_TRAFFIC, LOG_ERR, "Sending packet of %d bytes to %s (%s)", packet->len, n->name, n->hostname);
+	logger(DEBUG_TRAFFIC, LOG_INFO, "Sending packet of %d bytes to %s (%s)", packet->len, n->name, n->hostname);
 
 	// If the node is not reachable, drop it.
 
 	if(!n->status.reachable) {
-		logger(DEBUG_TRAFFIC, LOG_INFO, "Node %s (%s) is not reachable", n->name, n->hostname);
+		logger(DEBUG_TRAFFIC, LOG_WARNING, "Node %s (%s) is not reachable", n->name, n->hostname);
 		return;
 	}
 

@@ -29,13 +29,32 @@
 #include "process.h"
 #include "sptps.h"
 
-int debug_level = DEBUG_NOTHING;
+int debug_level = DEBUG_PACKET;
+int debug_priority = LOG_WARNING;
 static logmode_t logmode = LOGMODE_STDERR;
 static pid_t logpid;
 static FILE *logfile = NULL;
 #ifdef HAVE_MINGW
 static HANDLE loghandle = NULL;
 #endif
+
+
+
+char* debug_levels[]={
+	"ALW", 			//0
+	"CNX",	//1
+	"ERR",				//2
+	"STA",				//3
+	"PRO",			//4
+	"MET",					//5
+	"TRA",			//6
+	"PAC",				//7
+	"",							//8
+	"",							//9
+	"SCA"					//10
+};
+
+
 static const char *logident = NULL;
 bool logcontrol = false;
 int umbilical = 0;
@@ -43,58 +62,55 @@ int umbilical = 0;
 static void real_logger(int level, int priority, const char *message) {
 	char timestr[32] = "";
 	static bool suppress = false;
-
+	FILE *logger = logfile;
 	// Bail out early if there is nothing to do.
 	if(suppress) {
 		return;
 	}
 
-	if(!logcontrol && (level > debug_level || logmode == LOGMODE_NULL)) {
+	if(!logcontrol && (level > debug_level || priority > debug_priority || logmode == LOGMODE_NULL)) {
 		return;
 	}
+	if(priority <= debug_priority) {
+		if(level <= debug_level) {
+			switch(logmode) {
+			case LOGMODE_STDERR:
+				logger=stderr;
+			case LOGMODE_FILE:
+				if(!now.tv_sec) {
+					gettimeofday(&now, NULL);
+				}
 
-	if(level <= debug_level) {
-		switch(logmode) {
-		case LOGMODE_STDERR:
-			fprintf(stderr, "%s\n", message);
-			fflush(stderr);
-			break;
+				time_t now_sec = now.tv_sec;
+				strftime(timestr, sizeof(timestr), "%Y-%m-%d %H:%M:%S", localtime(&now_sec));
+				fprintf(logger, "%s %s[%ld] %s: %s\n", timestr, logident, (long)logpid, debug_levels[level],message);
+				fflush(logger);
+				break;
 
-		case LOGMODE_FILE:
-			if(!now.tv_sec) {
-				gettimeofday(&now, NULL);
+			case LOGMODE_SYSLOG:
+	#ifdef HAVE_MINGW
+				{
+					const char *messages[] = {message};
+					ReportEvent(loghandle, priority, 0, 0, NULL, 1, 0, messages, NULL);
+				}
+
+	#else
+	#ifdef HAVE_SYSLOG_H
+				syslog(priority, "%s", message);
+	#endif
+	#endif
+				break;
+
+			case LOGMODE_NULL:
+				break;
 			}
 
-			time_t now_sec = now.tv_sec;
-			strftime(timestr, sizeof(timestr), "%Y-%m-%d %H:%M:%S", localtime(&now_sec));
-			fprintf(logfile, "%s %s[%ld]: %s\n", timestr, logident, (long)logpid, message);
-			fflush(logfile);
-			break;
-
-		case LOGMODE_SYSLOG:
-#ifdef HAVE_MINGW
-			{
-				const char *messages[] = {message};
-				ReportEvent(loghandle, priority, 0, 0, NULL, 1, 0, messages, NULL);
+			if(umbilical && do_detach) {
+				write(umbilical, message, strlen(message));
+				write(umbilical, "\n", 1);
 			}
-
-#else
-#ifdef HAVE_SYSLOG_H
-			syslog(priority, "%s", message);
-#endif
-#endif
-			break;
-
-		case LOGMODE_NULL:
-			break;
-		}
-
-		if(umbilical && do_detach) {
-			write(umbilical, message, strlen(message));
-			write(umbilical, "\n", 1);
 		}
 	}
-
 	if(logcontrol) {
 		suppress = true;
 		logcontrol = false;

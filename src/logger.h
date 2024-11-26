@@ -68,6 +68,7 @@ enum {
 #include <stdbool.h>
 
 extern int debug_level;
+extern int debug_priority;
 extern bool logcontrol;
 extern int umbilical;
 extern void openlogger(const char *ident, logmode_t mode);

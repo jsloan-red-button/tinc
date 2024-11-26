@@ -97,6 +97,7 @@ static struct option const long_options[] = {
 	{"version", no_argument, NULL, 2},
 	{"no-detach", no_argument, NULL, 'D'},
 	{"debug", optional_argument, NULL, 'd'},
+	{"priority", optional_argument, NULL, 'p'},
 	{"bypass-security", no_argument, NULL, 3},
 	{"mlock", no_argument, NULL, 'L'},
 	{"chroot", no_argument, NULL, 'R'},
@@ -122,6 +123,7 @@ static void usage(bool status) {
 		printf("  -c, --config=DIR              Read configuration options from DIR.\n"
 		       "  -D, --no-detach               Don't fork and detach.\n"
 		       "  -d, --debug[=LEVEL]           Increase debug level or set it to LEVEL.\n"
+		       "  -p, --priority[=LEVEL]        Increase priority level or set it to LEVEL.\n"					 
 		       "  -n, --net=NETNAME             Connect to net NETNAME.\n"
 #ifdef HAVE_MLOCKALL
 		       "  -L, --mlock                   Lock tinc into main memory.\n"
@@ -149,7 +151,7 @@ static bool parse_options(int argc, char **argv) {
 
 	cmdline_conf = list_alloc((list_action_t)free_config);
 
-	while((r = getopt_long(argc, argv, "c:DLd::n:so:RU:", long_options, &option_index)) != EOF) {
+	while((r = getopt_long(argc, argv, "c:DLdp::n:so:RU:", long_options, &option_index)) != EOF) {
 		switch(r) {
 		case 0:   /* long option */
 			break;
@@ -183,7 +185,18 @@ static bool parse_options(int argc, char **argv) {
 			}
 
 			break;
+		case 'p': /* increase priority level */
+			if(!optarg && optind < argc && *argv[optind] != '-') {
+				optarg = argv[optind++];
+			}
 
+			if(optarg) {
+				debug_priority = atoi(optarg);
+			} else {
+				debug_priority++;
+			}
+
+			break;
 		case 'n': /* net name given */
 			netname = xstrdup(optarg);
 			break;
