@@ -151,7 +151,7 @@ static bool parse_options(int argc, char **argv) {
 
 	cmdline_conf = list_alloc((list_action_t)free_config);
 
-	while((r = getopt_long(argc, argv, "c:DLdp::n:so:RU:", long_options, &option_index)) != EOF) {
+	while((r = getopt_long(argc, argv, "c:DLd::p::n:so:RU:", long_options, &option_index)) != EOF) {
 		switch(r) {
 		case 0:   /* long option */
 			break;
